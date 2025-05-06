@@ -118,7 +118,7 @@ type PackageSource struct {
 	refs     []SourceRef
 }
 
-func (packages PackageSlice) Validate() error {
+func (packages PackageSlice) Validate(fleet *Fleet) error {
 	for idx := range packages {
 		p := &packages[idx]
 		if p.Name == "" {
@@ -131,13 +131,14 @@ func (packages PackageSlice) Validate() error {
 			if p.SrcPath == "" {
 				return fmt.Errorf("Package %q needs 'sourcePath'", p.Name)
 			}
+			u := UpstreamLookup(fleet, p.Upstream)
+			if u == nil {
+				return fmt.Errorf("failed to find upstream '%v' for package '%v'", p.Upstream, p.Name)
+			}
 		} else if p.SrcPath != "" {
 			return fmt.Errorf("Package %q cannot be a stub and have 'sourcePath'", p.Name)
 		}
-		if p.Upstream == "" {
-			return fmt.Errorf("Package %q has no upstream", p.Name)
-		}
-		if err := p.Packages.Validate(); err != nil { // Recursively validate packages
+		if err := p.Packages.Validate(fleet); err != nil { // Recursively validate packages
 			return err
 		}
 	}
@@ -163,6 +164,10 @@ func (fleet *Fleet) Validate() error {
 				if u.Git.Auth.Kind != "Secret" {
 					return fmt.Errorf("upstream %v, only auth kind 'Secret' supported", u.Name)
 				}
+			case "https":
+				if u.Git.Auth != nil {
+					return fmt.Errorf("upstream %v, cannot use auth specification with method 'https'", u.Name)
+				}
 			default:
 				return fmt.Errorf("upstream %v, unsupported auth method: %v", u.Name, u.Git.AuthMethod)
 			}
@@ -174,14 +179,8 @@ func (fleet *Fleet) Validate() error {
 	if _, found := fleet.Spec.Defaults.Metadata.Spec["name"]; found {
 		return fmt.Errorf("defaults.metadata.spec cannot have 'name' field")
 	}
-	for idx := range fleet.Spec.Packages {
-		p := &fleet.Spec.Packages[idx]
-		u := UpstreamLookup(fleet, p.Upstream)
-		if u == nil {
-			return fmt.Errorf("upstream names must be unique")
-		}
-	}
-	return fleet.Spec.Packages.Validate()
+	
+	return fleet.Spec.Packages.Validate(fleet)
 }
 
 func (fleet *Fleet) Default(packages PackageSlice, parentMeta Metadata) {

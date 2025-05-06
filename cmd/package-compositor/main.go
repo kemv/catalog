@@ -58,12 +58,17 @@ func Run(rl *fn.ResourceList) (bool, error) {
 			}
 
 			var username, password string
-			username = "git"
-			if u.Git.Auth != nil {
-				username, password, err = util.LookupSSHAuthSecret(u.Git.Auth.Name, u.Git.Auth.Namespace, rl)
-				if err != nil {
-					return false, err
+			if u.Git.AuthMethod == "sshAgent" || u.Git.AuthMethod == "sshPrivateKey" {
+				username = "git"
+				if u.Git.Auth != nil {
+					username, password, err = util.LookupSSHAuthSecret(u.Git.Auth.Name, u.Git.Auth.Namespace, rl)
+					if err != nil {
+						return false, err
+					}
 				}
+			} else if u.Git.AuthMethod == "https" {
+				username = ""
+				password = os.Getenv("GITHUB_TOKEN")
 			}
 
 			src, fnRes, er := NewPackageSource(u, srcBase, username, password)
