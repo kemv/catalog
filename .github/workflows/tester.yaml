@@ -99,4 +99,4 @@ jobs:
         EOF
 
         go build .
-        kpt fn source cmd/package-compositor/fleet.yaml | devbox run -- kpt fn eval - --exec cmd/package-compositor/package-compositor
+        devbox run -- kpt fn source cmd/package-compositor/fleet.yaml | devbox run -- kpt fn eval - --exec cmd/package-compositor/package-compositor
