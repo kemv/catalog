@@ -33,6 +33,7 @@ import (
 	"github.com/krm-functions/catalog/pkg/util"
 	"sigs.k8s.io/kustomize/kyaml/kio"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
+	giturls "github.com/whilp/git-urls"
 )
 
 type Fleet struct {
@@ -179,7 +180,7 @@ func (fleet *Fleet) Validate() error {
 	if _, found := fleet.Spec.Defaults.Metadata.Spec["name"]; found {
 		return fmt.Errorf("defaults.metadata.spec cannot have 'name' field")
 	}
-	
+
 	return fleet.Spec.Packages.Validate(fleet)
 }
 
@@ -454,4 +455,32 @@ func FilesystemToObjects(path string) ([]*yaml.RNode, error) {
 
 func PtrTo[T any](val T) *T {
 	return &val
+}
+
+func ConvertGitScheme (u Upstream) (string, error) {
+	parsedURL, err := giturls.Parse(u.Git.Repo)
+	if err != nil {
+			return "", err
+	}
+
+	var scheme string
+	switch u.Git.AuthMethod {
+		case "sshAgent":
+			scheme = "ssh"
+		case "sshPrivateKey":
+			scheme = "ssh"
+		case "https":
+			scheme = "https"
+		case "":
+			return u.Git.Repo, nil // Can't do changes when running default
+		default:
+			scheme = "unknown"
+	}
+
+	if parsedURL.Scheme != scheme {
+		parsedURL.Scheme = scheme
+		return parsedURL.String(), nil
+	}
+
+	return u.Git.Repo, nil
 }

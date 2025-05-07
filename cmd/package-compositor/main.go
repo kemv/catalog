@@ -67,8 +67,17 @@ func Run(rl *fn.ResourceList) (bool, error) {
 					}
 				}
 			} else if u.Git.AuthMethod == "https" {
-				username = ""
+				username = "someone"
 				password = os.Getenv("GITHUB_TOKEN")
+				if password == "" {
+					return false, fmt.Errorf("https authMethod of upstream %v requires GITHUB_TOKEN to be set as an environment variable", u.Name)
+				}
+			}
+
+			// In case the repo URL indicates a different scheme, we help the user by converting it automatically
+			u.Git.Repo, err = ConvertGitScheme(*u)
+			if err != nil {
+				return false, err
 			}
 
 			src, fnRes, er := NewPackageSource(u, srcBase, username, password)
