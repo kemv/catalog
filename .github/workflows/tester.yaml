@@ -100,3 +100,5 @@ jobs:
 
         go build .
         devbox run -- kpt fn source cmd/package-compositor/fleet.yaml | devbox run -- kpt fn eval - --exec cmd/package-compositor/package-compositor
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
