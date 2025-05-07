@@ -20,20 +20,22 @@ import (
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
+	"github.com/go-git/go-git/v5/plumbing/transport/http"
+	"github.com/go-git/go-git/v5/plumbing/transport"
 )
 
 type Repository struct {
 	URI             string
 	Repo            *gogit.Repository
 	Tree            *gogit.Worktree
-	AuthMethod      ssh.AuthMethod
+	AuthMethod      transport.AuthMethod
 	CurrentRevision string
 	CurrentHash     string
 }
 
 func Clone(uri, authMethod, username, password, fileBase string) (*Repository, error) {
 	var err error
-	var auth ssh.AuthMethod
+	var auth transport.AuthMethod
 	opts := &gogit.CloneOptions{
 		URL:   uri,
 		Depth: 1,
@@ -48,7 +50,12 @@ func Clone(uri, authMethod, username, password, fileBase string) (*Repository, e
 		if err != nil {
 			return nil, fmt.Errorf("sshPrivateKey auth setup %v: %v", uri, err)
 		}
-	}
+	} else if authMethod == "https" {
+		auth = &http.BasicAuth{
+				Username: username,
+				Password: password,
+		}
+  }
 	opts.Auth = auth
 	repo, err := gogit.PlainClone(fileBase, false, opts)
 	if err != nil {

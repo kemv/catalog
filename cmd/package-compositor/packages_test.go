@@ -29,6 +29,11 @@ spec:
     type: git
     git:
       repo: https://github.com/krm-functions/catalog.git
+  - name: example-https
+    type: git
+    git:
+      repo: https://github.com/krm-functions/catalog.git
+      authMethod: https
   defaults:
     metadata:
       spec:
@@ -38,9 +43,11 @@ spec:
   - name: foo
     ref: main
     sourcePath: examples/package-composer/pkg1
+    upstream: example
   - name: bar
     ref: main
     sourcePath: examples/package-composer/pkg2
+    upstream: example
     metadata:
       spec:
         k2: v2
@@ -49,6 +56,7 @@ spec:
     - name: bar1
       ref: main
       sourcePath: examples/package-composer/pkg3
+      upstream: example
       metadata:
         spec:
           k3-2: v3-2
@@ -63,6 +71,7 @@ spec:
     - name: zap1
       ref: main
       sourcePath: examples/package-composer/pkg4
+      upstream: example-https
       metadata:
         spec:
           k5-2: v5-2
@@ -70,6 +79,7 @@ spec:
     - name: zap2
       ref: main
       sourcePath: examples/package-composer/pkg4
+      upstream: example-https
       metadata:
         inheritFromParent: false
         spec:
