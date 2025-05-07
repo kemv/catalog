@@ -1,0 +1,102 @@
+name: tester
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      packages: read
+      id-token: none
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+    - name: Install devbox
+      uses: jetify-com/devbox-install-action@v0.12.0
+
+    - name: install kpt
+      run: |
+        curl -sLO https://github.com/GoogleContainerTools/kpt/releases/download/v1.0.0-beta.38/kpt_linux_amd64-1.0.0-beta.38.tar.gz
+        tar -xzf kpt_linux_amd64-1.0.0-beta.38.tar.gz
+        mv kpt /usr/local/bin/
+
+    - name: testing
+      run: |
+        cd cmd/package-compositor
+
+        cat <<EOF > fleet.yaml
+        apiVersion: fn.kpt.dev/v1alpha1
+        kind: Fleet
+        metadata:
+          name: example-fleet
+        spec:
+
+          upstreams:
+          - name: example
+            type: git
+            git:
+              repo: https://github.com/krm-functions/catalog
+          - name: example-https
+            type: git
+            git:
+              repo: https://github.com/krm-functions/catalog
+              authMethod: https
+          - git:
+              authMethod: sshAgent
+              #repo: https://github.com/tv2/ccs-components
+              repo: git@github.com:tv2/ccs-components.git
+            name: ccs-components
+            type: git
+
+          # These settings can also be given individually for each package
+          defaults:
+            upstream: example
+            enabled: true
+            ref: main
+
+          packages:
+          - name: foo
+            sourcePath: examples/package-compositor/pkg1
+          - name: bar
+            sourcePath: examples/package-compositor/pkg2
+            upstream: example-https
+            packages:
+            - name: baz1
+              sourcePath: examples/package-compositor/pkg3
+            - name: baz2
+              sourcePath: examples/package-compositor/pkg1
+              upstream: example-https
+          - name: olo
+            stub: true
+            packages:
+            - name: baz
+              sourcePath: examples/package-compositor/pkg4
+          - name: boo
+            enabled: false
+            sourcePath: examples/package-compositor/pkg1
+
+          - name: policies
+            packages:
+            - name: policies
+              packages:
+              - name: constrainttemplates
+                ref: feature/components-v2
+                sourcePath: gatekeeper-constrainttemplates/manifests
+                upstream: ccs-components
+              - name: constraints
+                ref: feature/components-v2
+                sourcePath: gatekeeper-constraints-global/manifests
+                upstream: ccs-components
+              ref: feature/components-v2
+              sourcePath: kpt/pipelines/mark-as-local-resources
+              upstream: ccs-components
+            stub: true
+        EOF
+
+        go build .
+        kpt fn source cmd/package-compositor/fleet.yaml | devbox run -- kpt fn eval - --exec cmd/package-compositor/package-compositor
